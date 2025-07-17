@@ -1,0 +1,15 @@
+{
+  "id": "litebanswebhook",
+  "name": "LiteBansWebhook",
+  "version": "1.0.0",
+  "authors": [
+    "Drak"
+  ],
+  "dependencies": [
+    {
+      "id": "litebans",
+      "optional": false
+    }
+  ],
+  "main": "net.streamline.base.StreamlineVelocity"
+}

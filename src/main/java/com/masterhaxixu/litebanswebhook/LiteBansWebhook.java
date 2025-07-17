@@ -1,39 +1,87 @@
 package com.masterhaxixu.litebanswebhook;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.concurrent.TimeUnit;
 
-import com.masterhaxixu.litebanswebhook.commands.ReloadCommand;
+import com.google.inject.Inject;
 
+import com.masterhaxixu.litebanswebhook.config.MainConfig;
+import com.velocitypowered.api.event.Subscribe;
+import com.velocitypowered.api.event.proxy.ProxyInitializeEvent;
+import com.velocitypowered.api.proxy.ProxyServer;
+import gg.drak.thebase.objects.handling.derived.IModifierEventable;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.HttpClients;
-import org.bukkit.Bukkit;
-import org.bukkit.plugin.java.JavaPlugin;
 import litebans.api.Database;
 import litebans.api.Entry;
 import litebans.api.Events;
+import org.slf4j.Logger;
 
-public class LiteBansWebhook extends JavaPlugin {
+public class LiteBansWebhook implements IModifierEventable {
+    private static LiteBansWebhook instance;
 
-    @Override
-    public void onEnable() {
-        saveDefaultConfig();
-        JsonChecker.checkFiles(getDataFolder().getAbsolutePath());
-        if (getConfig().getString("webhookurl").equals("WEBHOOK_URL")
-                || getConfig().getString("webhookurl").isEmpty()) {
-            this.getLogger().warning("No webhook provided in config.yml. Disabling...");
-            this.getServer().getPluginManager().disablePlugin(this);
+    public static LiteBansWebhook getInstance() {
+        return instance;
+    }
+
+    public static void setInstance(LiteBansWebhook instance) {
+        LiteBansWebhook.instance = instance;
+    }
+
+    private static MainConfig config;
+
+    public static MainConfig getConfig() {
+        if (config == null) {
+            config = new MainConfig();
         }
+        return config;
+    }
+
+    public static void setConfig(MainConfig config) {
+        LiteBansWebhook.config = config;
+    }
+
+    private final ProxyServer server;
+    private final Logger logger;
+
+    public Logger getLogger() {
+        return logger;
+    }
+
+    public ProxyServer getServer() {
+        return server;
+    }
+
+    @Inject
+    public LiteBansWebhook(ProxyServer server,
+                              Logger logger) {
+        this.server = server;
+        this.logger = logger;
+    }
+
+    @Subscribe
+    public void onEnable(ProxyInitializeEvent event) {
+        setInstance(this);
+        setConfig(new MainConfig());
+
+        JsonChecker.checkFiles(getDataFolder().getAbsolutePath());
+        String webhookUrl = getConfig().getWebhookUrl();
+        if (webhookUrl.equals("WEBHOOK_URL")
+                || webhookUrl.isEmpty()) {
+            getLogger().error("Please set the webhook URL in the config.yml file!");
+        }
+
         getLogger().info("Plugin Enabled!");
         registerEvents();
-        this.getCommand("litebanswebhook").setExecutor(new ReloadCommand(this));
     }
 
     public void registerEvents() {
@@ -56,7 +104,7 @@ public class LiteBansWebhook extends JavaPlugin {
             String json;
             StringEntity params;
             HttpClient httpClient = HttpClients.createDefault();
-            HttpPost request = new HttpPost(getConfig().getString("webhookurl"));
+            HttpPost request = new HttpPost(getConfig().getWebhookUrl());
             request.setHeader("Content-type", "application/json");
             switch (entry.getType()) {
                 case "ban":
@@ -91,13 +139,13 @@ public class LiteBansWebhook extends JavaPlugin {
                     break;
             }
 
-            Bukkit.getScheduler().runTaskAsynchronously(this, () -> {
+            getServer().getScheduler().buildTask(this, () -> {
                 try {
                     httpClient.execute(request);
                 } catch (IOException e) {
-                    this.getLogger().severe("Failed to send notification. Is the webhook valid?");
+                    this.getLogger().error("Failed to send notification. Is the webhook valid?");
                 }
-            });
+            }).schedule();
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -109,7 +157,7 @@ public class LiteBansWebhook extends JavaPlugin {
             String json;
             StringEntity params;
             HttpClient httpClient = HttpClients.createDefault();
-            HttpPost request = new HttpPost(getConfig().getString("webhookurl"));
+            HttpPost request = new HttpPost(getConfig().getWebhookUrl());
             request.setHeader("Content-type", "application/json");
             switch (entry.getType()) {
                 case "ban":
@@ -193,13 +241,13 @@ public class LiteBansWebhook extends JavaPlugin {
                     request.setEntity(params);
             }
 
-            Bukkit.getScheduler().runTaskAsynchronously(this, () -> {
+            getServer().getScheduler().buildTask(this, () -> {
                 try {
                     httpClient.execute(request);
                 } catch (IOException e) {
-                    this.getLogger().severe("Failed to send notification. Is the webhook valid?");
+                    this.getLogger().error("Failed to send notification. Is the webhook valid?");
                 }
-            });
+            }).schedule();
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -282,4 +330,64 @@ public class LiteBansWebhook extends JavaPlugin {
         return null;
     }
 
+    @Override
+    public ModifierType getModifierType() {
+        return ModifierType.PLUGIN;
+    }
+
+    @Override
+    public File getDataFolder() {
+        return getOwnFolder();
+    }
+
+    @Override
+    public String getIdentifier() {
+        return "LiteBansWebhook";
+    }
+
+    public static File getOwnFolder() {
+        return new File(getPluginsDirectory(), "LiteBansWebhook");
+    }
+
+    public static File getPluginsDirectory() {
+        File file = getSystemFile();
+
+        File[] files = file.listFiles();
+        if (files == null) {
+            return null;
+        }
+
+        File pluginDirectory = null;
+        for (File f : files) {
+            if (f.getName().equals("plugins")) {
+                pluginDirectory = f;
+                break;
+            }
+        }
+        if (pluginDirectory == null) {
+            file = file.getParentFile();
+
+            files = file.listFiles();
+            if (files == null) {
+                return null;
+            }
+
+            for (File f : files) {
+                if (f.getName().equals("plugins")) {
+                    pluginDirectory = f;
+                    break;
+                }
+            }
+        }
+
+        return pluginDirectory;
+    }
+
+    public static Path getSystemPath() {
+        return Path.of(System.getProperty("user.dir"));
+    }
+
+    public static File getSystemFile() {
+        return getSystemPath().toFile();
+    }
 }
