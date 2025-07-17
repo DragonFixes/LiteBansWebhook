@@ -12,10 +12,10 @@ import java.util.concurrent.TimeUnit;
 
 import com.google.inject.Inject;
 
-import com.masterhaxixu.litebanswebhook.config.MainConfig;
 import com.velocitypowered.api.event.Subscribe;
 import com.velocitypowered.api.event.proxy.ProxyInitializeEvent;
 import com.velocitypowered.api.proxy.ProxyServer;
+import gg.drak.litebanswebhook.config.MainConfig;
 import gg.drak.thebase.objects.handling.derived.IModifierEventable;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpPost;
