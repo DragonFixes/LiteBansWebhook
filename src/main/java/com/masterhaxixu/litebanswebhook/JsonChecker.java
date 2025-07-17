@@ -4,8 +4,6 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 
-import org.bukkit.Bukkit;
-
 public class JsonChecker {
 
     public static void checkFiles(String dataFolder) {
@@ -34,7 +32,7 @@ public class JsonChecker {
             for (int i = 0; i < fileNames.length; i++) {
                 File file = new File(embedsDir, fileNames[i] + ".json");
                 if (!file.exists()) {
-                    Bukkit.getLogger().info("Created File "+fileNames[i]+".json");
+                    LiteBansWebhook.getInstance().getLogger().info("Created File "+fileNames[i]+".json");
                     FileWriter writer = new FileWriter(file);
                     writer.write(jsonValues[i]);
                     writer.close();
