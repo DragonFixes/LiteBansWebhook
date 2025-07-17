@@ -1,7 +1,7 @@
 {
   "id": "litebanswebhook",
-  "name": "LiteBansWebhook",
-  "version": "1.0.0",
+  "name": "${name}",
+  "version": "${version}",
   "authors": [
     "Drak"
   ],
@@ -11,5 +11,5 @@
       "optional": false
     }
   ],
-  "main": "com.masterhaxixu.litebanswebhook.LiteBansWebhook"
+  "main": "gg.drak.litebanswebhook.LiteBansWebhook"
 }

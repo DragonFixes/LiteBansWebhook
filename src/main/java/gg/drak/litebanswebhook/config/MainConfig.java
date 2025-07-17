@@ -1,6 +1,6 @@
-package com.masterhaxixu.litebanswebhook.config;
+package gg.drak.litebanswebhook.config;
 
-import com.masterhaxixu.litebanswebhook.LiteBansWebhook;
+import gg.drak.litebanswebhook.LiteBansWebhook;
 import gg.drak.thebase.storage.resources.flat.simple.SimpleConfiguration;
 
 public class MainConfig extends SimpleConfiguration {

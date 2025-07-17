@@ -1,0 +1,111 @@
+plugins {
+    id 'java'
+    id 'com.gradleup.shadow' version "8.3.6" // for shadowing
+    id "io.freefair.lombok" version "8.6"
+}
+
+apply from: rootDir.toString() + '/dependencies.gradle'
+
+group = properties['group']
+version = properties['version']
+
+java.sourceCompatibility = JavaVersion.VERSION_11
+java.targetCompatibility = JavaVersion.VERSION_11
+
+ext {
+    pluginMain = properties['plugin.main'] == 'default' ?
+            "${project.group}.${project.name.toLowerCase()}.${project.name}" :
+            properties['plugin.main']
+}
+
+repositories {
+    // Maven Defaults
+    mavenCentral()
+    mavenLocal()
+    maven { url "https://mvnrepository.com/artifact" }
+
+    // JitPack
+    maven { url "https://jitpack.io" }
+
+    // Local libs folder as a flat directory repository
+    flatDir {
+        dirs "${rootDir}/libs"
+    }
+
+    // Spigot / Bukkit
+    maven {
+        url "https://hub.spigotmc.org/nexus/content/repositories/snapshots"
+        content {
+            includeGroup "org.bukkit"
+            includeGroup "org.spigotmc"
+        }
+    }
+    maven { url "https://oss.sonatype.org/content/repositories/snapshots" }
+    maven { url "https://oss.sonatype.org/content/repositories/central" }
+
+    // Paper / Velocity
+    maven {
+        name = 'papermc'
+        url = 'https://repo.papermc.io/repository/maven-public/'
+    }
+
+    // OpenCollab
+    maven {
+        name "opencollabRepositoryMavenSnapshots"
+        url "https://repo.opencollab.dev/maven-snapshots"
+    }
+    maven {
+        name "opencollabRepositoryMavenReleases"
+        url "https://repo.opencollab.dev/maven-releases"
+    }
+}
+
+dependencies {
+    // Defaults.
+    compileOnly(files(FILES))
+    annotationProcessor(ANNO)
+    implementation(IMPL)
+    compileOnly(COMP_ONLY)
+    shadow(SHADOW)
+
+    // Other Plugins
+    compileOnly(OTHER_PLUGINS)
+
+    compileOnly 'com.velocitypowered:velocity-api:3.4.0-SNAPSHOT'
+    annotationProcessor 'com.velocitypowered:velocity-api:3.4.0-SNAPSHOT'
+}
+
+processResources {
+    // Debugging: Print values
+    doFirst {
+        println "Version: ${project.version}, Name: ${project.name}, Main: ${project.ext.pluginMain}"
+    }
+
+    inputs.property('name', "${project.name}")
+    inputs.property('version', "${project.version}")
+    inputs.property('main', "${project.ext.pluginMain}")
+
+    filesMatching('**/velocity-plugin.json') {
+        expand (
+                'name': "${project.name}",
+                'version': "${project.version}",
+                'main': "${project.ext.pluginMain}",
+        )
+    }
+}
+
+shadowJar {
+    archiveClassifier.set('')
+
+    buildDir = "target/"
+    archiveFileName = "${project.name}-${project.version}.jar"
+}
+
+artifacts {
+    archives shadowJar
+}
+
+wrapper {
+    gradleVersion = '8.9'
+    distributionType = Wrapper.DistributionType.ALL
+}
