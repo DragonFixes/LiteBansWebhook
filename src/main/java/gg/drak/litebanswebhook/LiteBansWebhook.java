@@ -109,31 +109,31 @@ public class LiteBansWebhook implements IModifierEventable {
             switch (entry.getType()) {
                 case "ban":
                     json = new String(Files.readAllBytes(Paths.get(getDataFolder().getAbsolutePath()+"/embeds/ban-remove.json")));
-                    json = json.replace("PLAYER", p).replace("EXECUTOR", entry.getExecutorName()).replace("SERVER", entry.getServerOrigin());
+                    json = json.replace("%player%", p).replace("%staff%", entry.getExecutorName()).replace("%server%", entry.getServerOrigin());
                     if (entry.getReason() == null)
-                        json = json.replace("REASON", "No Reason Provided");
+                        json = json.replace("%reason%", "No Reason Provided");
                     else
-                        json = json.replace("REASON", entry.getReason());
+                        json = json.replace("%reason%", entry.getReason());
                     params = new StringEntity(json);
                     request.setEntity(params);
                     break;
                 case "mute":
                     json = new String(Files.readAllBytes(Paths.get(getDataFolder().getAbsolutePath()+"/embeds/mute-remove.json")));
-                    json = json.replace("PLAYER", p).replace("EXECUTOR", entry.getExecutorName()).replace("SERVER", entry.getServerOrigin());
+                    json = json.replace("%player%", p).replace("%staff%", entry.getExecutorName()).replace("%server%", entry.getServerOrigin());
                     if (entry.getReason() == null)
-                        json = json.replace("REASON", "No Reason Provided");
+                        json = json.replace("%reason%", "No Reason Provided");
                     else
-                        json = json.replace("REASON", entry.getReason());
+                        json = json.replace("%reason%", entry.getReason());
                     params = new StringEntity(json);
                     request.setEntity(params);
                     break;
                 case "warn":
                     json = new String(Files.readAllBytes(Paths.get(getDataFolder().getAbsolutePath()+"/embeds/warn-remove.json")));
-                    json = json.replace("PLAYER", p).replace("EXECUTOR", entry.getExecutorName()).replace("SERVER", entry.getServerOrigin());
+                    json = json.replace("%player%", p).replace("%staff%", entry.getExecutorName()).replace("%server%", entry.getServerOrigin());
                     if (entry.getReason() == null)
-                        json = json.replace("REASON", "No Reason Provided");
+                        json = json.replace("%reason%", "No Reason Provided");
                     else
-                        json = json.replace("REASON", entry.getReason());
+                        json = json.replace("%reason%", entry.getReason());
                     params = new StringEntity(json);
                     request.setEntity(params);
                     break;
@@ -163,11 +163,11 @@ public class LiteBansWebhook implements IModifierEventable {
                 case "ban":
                     if (entry.isIpban()) {
                         json = new String(Files.readAllBytes(Paths.get(getDataFolder().getAbsolutePath()+"/embeds/ipban-added.json")));
-                        json = json.replace("PLAYER", p).replace("EXECUTOR", entry.getExecutorName()).replace("SERVER", entry.getServerOrigin());
+                        json = json.replace("%player%", p).replace("%staff%", entry.getExecutorName()).replace("%server%", entry.getServerOrigin());
                         if (entry.getReason() == null)
-                            json = json.replace("REASON", "No Reason Provided");
+                            json = json.replace("%reason%", "No Reason Provided");
                         else
-                            json = json.replace("REASON", entry.getReason());
+                            json = json.replace("%reason%", entry.getReason());
                         if (!entry.isPermanent())
                             json = json.replace("DURATION", getDurationString(entry.getDuration()));
                         else
@@ -176,11 +176,11 @@ public class LiteBansWebhook implements IModifierEventable {
                         request.setEntity(params);
                     } else {
                         json = new String(Files.readAllBytes(Paths.get(getDataFolder().getAbsolutePath()+"/embeds/ban-added.json")));
-                        json = json.replace("PLAYER", p).replace("EXECUTOR", entry.getExecutorName()).replace("SERVER", entry.getServerOrigin());
+                        json = json.replace("%player%", p).replace("%staff%", entry.getExecutorName()).replace("%server%", entry.getServerOrigin());
                         if (entry.getReason() == null)
-                            json = json.replace("REASON", "No Reason Provided");
+                            json = json.replace("%reason%", "No Reason Provided");
                         else
-                            json = json.replace("REASON", entry.getReason());
+                            json = json.replace("%reason%", entry.getReason());
                         if (!entry.isPermanent())
                             json = json.replace("DURATION", getDurationString(entry.getDuration()));
                         else
@@ -192,8 +192,8 @@ public class LiteBansWebhook implements IModifierEventable {
                     break;
                 case "kick":
                     json = new String(Files.readAllBytes(Paths.get(getDataFolder().getAbsolutePath()+"/embeds/kick.json")));
-                    json = json.replace("PLAYER", p).replace("EXECUTOR", entry.getExecutorName()).replace("REASON",
-                            entry.getReason()).replace("SERVER", entry.getServerOrigin());
+                    json = json.replace("%player%", p).replace("%staff%", entry.getExecutorName()).replace("%reason%",
+                            entry.getReason()).replace("%server%", entry.getServerOrigin());
                     if (!entry.isPermanent())
                         json = json.replace("DURATION", getDurationString(entry.getDuration()));
                     else
@@ -204,11 +204,11 @@ public class LiteBansWebhook implements IModifierEventable {
                 case "mute":
                     if (entry.isIpban()) {
                         json = new String(Files.readAllBytes(Paths.get(getDataFolder().getAbsolutePath()+"/embeds/ipmute-added.json")));
-                        json = json.replace("PLAYER", p).replace("EXECUTOR", entry.getExecutorName()).replace("SERVER", entry.getServerOrigin());
+                        json = json.replace("%player%", p).replace("%staff%", entry.getExecutorName()).replace("%server%", entry.getServerOrigin());
                         if (entry.getReason() == null)
-                            json = json.replace("REASON", "No Reason Provided");
+                            json = json.replace("%reason%", "No Reason Provided");
                         else
-                            json = json.replace("REASON", entry.getReason());
+                            json = json.replace("%reason%", entry.getReason());
                         if (!entry.isPermanent())
                             json = json.replace("DURATION", getDurationString(entry.getDuration()));
                         else
@@ -217,11 +217,11 @@ public class LiteBansWebhook implements IModifierEventable {
                         request.setEntity(params);
                     } else {
                         json = new String(Files.readAllBytes(Paths.get(getDataFolder().getAbsolutePath()+"/embeds/mute-added.json")));
-                        json = json.replace("PLAYER", p).replace("EXECUTOR", entry.getExecutorName()).replace("SERVER", entry.getServerOrigin());
+                        json = json.replace("%player%", p).replace("%staff%", entry.getExecutorName()).replace("%server%", entry.getServerOrigin());
                         if (entry.getReason() == null)
-                            json = json.replace("REASON", "No Reason Provided");
+                            json = json.replace("%reason%", "No Reason Provided");
                         else
-                            json = json.replace("REASON", entry.getReason());
+                            json = json.replace("%reason%", entry.getReason());
                         if (!entry.isPermanent())
                             json = json.replace("DURATION", getDurationString(entry.getDuration()));
                         else
@@ -232,11 +232,11 @@ public class LiteBansWebhook implements IModifierEventable {
                     break;
                 case "warn":
                     json = new String(Files.readAllBytes(Paths.get(getDataFolder().getAbsolutePath()+"/embeds/warn-added.json")));
-                    json = json.replace("PLAYER", p).replace("EXECUTOR", entry.getExecutorName()).replace("SERVER", entry.getServerOrigin());
+                    json = json.replace("%player%", p).replace("%staff%", entry.getExecutorName()).replace("%server%", entry.getServerOrigin());
                     if (entry.getReason() == null)
-                        json = json.replace("REASON", "No Reason Provided");
+                        json = json.replace("%reason%", "No Reason Provided");
                     else
-                        json = json.replace("REASON", entry.getReason());
+                        json = json.replace("%reason%", entry.getReason());
                     params = new StringEntity(json);
                     request.setEntity(params);
             }
