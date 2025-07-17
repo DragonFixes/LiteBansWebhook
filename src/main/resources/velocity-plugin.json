@@ -11,5 +11,5 @@
       "optional": false
     }
   ],
-  "main": "net.streamline.base.StreamlineVelocity"
+  "main": "com.masterhaxixu.litebanswebhook.LiteBansWebhook"
 }
