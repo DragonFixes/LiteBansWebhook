@@ -37,15 +37,8 @@ public class LiteBansUtils {
                     fileName = Utils.WARN_REMOVED;
                     break;
             }
-            HttpClient client = HttpClients.createDefault();
-            HttpPost request = new HttpPost(InstanceHolder.getConfig().getWebhookUrl());
-            request.setHeader("Content-type", "application/json");
 
-            String json = Utils.withFile(fileName, entry);
-            StringEntity params = new StringEntity(json);
-            request.setEntity(params);
-
-            sendRequest(client, request);
+            sendRequestWithFile(fileName, entry);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -76,18 +69,23 @@ public class LiteBansUtils {
                     fileName = Utils.WARN_ADDED;
                     break;
             }
-            HttpClient client = HttpClients.createDefault();
-            HttpPost request = new HttpPost(InstanceHolder.getConfig().getWebhookUrl());
-            request.setHeader("Content-type", "application/json");
 
-            String json = Utils.withFile(fileName, entry);
-            StringEntity params = new StringEntity(json);
-            request.setEntity(params);
-
-            sendRequest(client, request);
+            sendRequestWithFile(fileName, entry);
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    public static void sendRequestWithFile(String fileName, Entry entry) throws IOException {
+        HttpClient client = HttpClients.createDefault();
+        HttpPost request = new HttpPost(InstanceHolder.getConfig().getWebhookUrl());
+        request.setHeader("Content-type", "application/json");
+
+        String json = Utils.withFile(fileName, entry);
+        StringEntity params = new StringEntity(json);
+        request.setEntity(params);
+
+        sendRequest(client, request);
     }
 
     public static void sendRequest(HttpClient client, HttpPost request) {
