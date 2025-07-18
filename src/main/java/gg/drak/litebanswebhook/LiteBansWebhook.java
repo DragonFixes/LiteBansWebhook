@@ -2,9 +2,7 @@ package gg.drak.litebanswebhook;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -16,7 +14,11 @@ import com.velocitypowered.api.event.Subscribe;
 import com.velocitypowered.api.event.proxy.ProxyInitializeEvent;
 import com.velocitypowered.api.proxy.ProxyServer;
 import gg.drak.litebanswebhook.config.MainConfig;
+import gg.drak.litebanswebhook.utils.Utils;
+import gg.drak.thebase.async.AsyncUtils;
 import gg.drak.thebase.objects.handling.derived.IModifierEventable;
+import lombok.Getter;
+import lombok.Setter;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
@@ -26,46 +28,24 @@ import litebans.api.Entry;
 import litebans.api.Events;
 import org.slf4j.Logger;
 
+@Getter @Setter
 public class LiteBansWebhook implements IModifierEventable {
+    @Getter @Setter
     private static LiteBansWebhook instance;
 
-    public static LiteBansWebhook getInstance() {
-        return instance;
-    }
-
-    public static void setInstance(LiteBansWebhook instance) {
-        LiteBansWebhook.instance = instance;
-    }
-
+    @Getter @Setter
     private static MainConfig config;
 
-    public static MainConfig getConfig() {
-        if (config == null) {
-            config = new MainConfig();
-        }
-        return config;
-    }
-
-    public static void setConfig(MainConfig config) {
-        LiteBansWebhook.config = config;
-    }
-
-    private final ProxyServer server;
-    private final Logger logger;
-
-    public Logger getLogger() {
-        return logger;
-    }
-
-    public ProxyServer getServer() {
-        return server;
-    }
+    @Getter @Setter
+    private static ProxyServer server;
+    @Getter @Setter
+    private static Logger logger;
 
     @Inject
     public LiteBansWebhook(ProxyServer server,
                               Logger logger) {
-        this.server = server;
-        this.logger = logger;
+        setServer(server);
+        setLogger(logger);
     }
 
     @Subscribe
@@ -73,10 +53,10 @@ public class LiteBansWebhook implements IModifierEventable {
         setInstance(this);
         setConfig(new MainConfig());
 
-        JsonChecker.checkFiles(getDataFolder().getAbsolutePath());
+        Utils.checkFiles();
+
         String webhookUrl = getConfig().getWebhookUrl();
-        if (webhookUrl.equals("WEBHOOK_URL")
-                || webhookUrl.isEmpty()) {
+        if (webhookUrl.equals("WEBHOOK_URL") || webhookUrl.isEmpty()) {
             getLogger().error("Please set the webhook URL in the config.yml file!");
         }
 
@@ -88,172 +68,145 @@ public class LiteBansWebhook implements IModifierEventable {
         Events.get().register(new Events.Listener() {
             @Override
             public void entryRemoved(Entry entry) {
-                LiteBansWebhook.this.entryRemoved(entry);
+                LiteBansWebhook.entryRemoved(entry);
             }
 
             @Override
             public void entryAdded(Entry entry) {
-                LiteBansWebhook.this.entryAdded(entry);
+                LiteBansWebhook.entryAdded(entry);
             }
         });
     }
 
-    private void entryRemoved(Entry entry) {
+    public static String wrap(String json, Entry entry) {
+        String p = getPlayerName(entry.getUuid());
+        if (p == null || p.isEmpty()) {
+            p = "Unknown Player";
+        }
+        String executor = entry.getExecutorName();
+        if (executor == null || executor.isEmpty()) {
+            executor = "Unknown Player";
+        }
+        json = json.replace("%player%", p).replace("%staff%", executor).replace("%server%", entry.getServerOrigin());
+        if (entry.getReason() == null)
+            json = json.replace("%reason%", "No Reason Provided");
+        else
+            json = json.replace("%reason%", entry.getReason());
+        if (! entry.isPermanent())
+            json = json.replace("%duration%", getDurationString(entry.getDuration()));
+        else
+            json = json.replace("%duration%", "");
+
+        if (entry.isIpban()) {
+            json = json.replace("%ipban%", "Yes");
+        } else {
+            json = json.replace("%ipban%", "No");
+        }
+
+        if (entry.getId() != -1) {
+            json = json.replace("%id%", String.valueOf(entry.getId()));
+        } else {
+            json = json.replace("%id%", "Unknown ID");
+        }
+
+        return json;
+    }
+
+    public static String withFile(String fileName, Entry entry) {
         try {
-            String p = getPlayerName(entry.getUuid());
-            String json;
-            StringEntity params;
-            HttpClient httpClient = HttpClients.createDefault();
-            HttpPost request = new HttpPost(getConfig().getWebhookUrl());
-            request.setHeader("Content-type", "application/json");
+            String json = Utils.read(fileName);
+            return wrap(json, entry);
+        } catch (Throwable e) {
+            e.printStackTrace();
+            return Utils.getErrorJson();
+        }
+    }
+
+    public static void entryRemoved(Entry entry) {
+        try {
+            String fileName = "error.json";
             switch (entry.getType()) {
                 case "ban":
-                    json = new String(Files.readAllBytes(Paths.get(getDataFolder().getAbsolutePath()+"/embeds/ban-remove.json")));
-                    json = json.replace("%player%", p).replace("%staff%", entry.getExecutorName()).replace("%server%", entry.getServerOrigin());
-                    if (entry.getReason() == null)
-                        json = json.replace("%reason%", "No Reason Provided");
-                    else
-                        json = json.replace("%reason%", entry.getReason());
-                    params = new StringEntity(json);
-                    request.setEntity(params);
+                    if (entry.isIpban()) {
+                        fileName = "ipban-remove.json";
+                    } else {
+                        fileName = "ban-remove.json";
+                    }
                     break;
                 case "mute":
-                    json = new String(Files.readAllBytes(Paths.get(getDataFolder().getAbsolutePath()+"/embeds/mute-remove.json")));
-                    json = json.replace("%player%", p).replace("%staff%", entry.getExecutorName()).replace("%server%", entry.getServerOrigin());
-                    if (entry.getReason() == null)
-                        json = json.replace("%reason%", "No Reason Provided");
-                    else
-                        json = json.replace("%reason%", entry.getReason());
-                    params = new StringEntity(json);
-                    request.setEntity(params);
+                    if (entry.isIpban()) {
+                        fileName = "ipmute-remove.json";
+                    } else {
+                        fileName = "mute-remove.json";
+                    }
                     break;
                 case "warn":
-                    json = new String(Files.readAllBytes(Paths.get(getDataFolder().getAbsolutePath()+"/embeds/warn-remove.json")));
-                    json = json.replace("%player%", p).replace("%staff%", entry.getExecutorName()).replace("%server%", entry.getServerOrigin());
-                    if (entry.getReason() == null)
-                        json = json.replace("%reason%", "No Reason Provided");
-                    else
-                        json = json.replace("%reason%", entry.getReason());
-                    params = new StringEntity(json);
-                    request.setEntity(params);
+                    fileName = "warn-remove.json";
                     break;
             }
+            HttpClient client = HttpClients.createDefault();
+            HttpPost request = new HttpPost(getConfig().getWebhookUrl());
+            request.setHeader("Content-type", "application/json");
 
-            getServer().getScheduler().buildTask(this, () -> {
-                try {
-                    httpClient.execute(request);
-                } catch (IOException e) {
-                    this.getLogger().error("Failed to send notification. Is the webhook valid?");
-                }
-            }).schedule();
+            String json = withFile(fileName, entry);
+            StringEntity params = new StringEntity(json);
+            request.setEntity(params);
+
+            sendRequest(client, request);
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    private void entryAdded(Entry entry) {
+    public static void entryAdded(Entry entry) {
         try {
-            String p = getPlayerName(entry.getUuid());
-            String json;
-            StringEntity params;
-            HttpClient httpClient = HttpClients.createDefault();
-            HttpPost request = new HttpPost(getConfig().getWebhookUrl());
-            request.setHeader("Content-type", "application/json");
+            String fileName = "error.json";
             switch (entry.getType()) {
                 case "ban":
                     if (entry.isIpban()) {
-                        json = new String(Files.readAllBytes(Paths.get(getDataFolder().getAbsolutePath()+"/embeds/ipban-added.json")));
-                        json = json.replace("%player%", p).replace("%staff%", entry.getExecutorName()).replace("%server%", entry.getServerOrigin());
-                        if (entry.getReason() == null)
-                            json = json.replace("%reason%", "No Reason Provided");
-                        else
-                            json = json.replace("%reason%", entry.getReason());
-                        if (!entry.isPermanent())
-                            json = json.replace("DURATION", getDurationString(entry.getDuration()));
-                        else
-                            json = json.replace("DURATION", "");
-                        params = new StringEntity(json);
-                        request.setEntity(params);
+                        fileName = "ipban-added.json";
                     } else {
-                        json = new String(Files.readAllBytes(Paths.get(getDataFolder().getAbsolutePath()+"/embeds/ban-added.json")));
-                        json = json.replace("%player%", p).replace("%staff%", entry.getExecutorName()).replace("%server%", entry.getServerOrigin());
-                        if (entry.getReason() == null)
-                            json = json.replace("%reason%", "No Reason Provided");
-                        else
-                            json = json.replace("%reason%", entry.getReason());
-                        if (!entry.isPermanent())
-                            json = json.replace("DURATION", getDurationString(entry.getDuration()));
-                        else
-                            json = json.replace("DURATION", "");
-                        params = new StringEntity(json);
-                        request.setEntity(params);
-
+                        fileName = "ban-added.json";
                     }
                     break;
                 case "kick":
-                    json = new String(Files.readAllBytes(Paths.get(getDataFolder().getAbsolutePath()+"/embeds/kick.json")));
-                    json = json.replace("%player%", p).replace("%staff%", entry.getExecutorName()).replace("%reason%",
-                            entry.getReason()).replace("%server%", entry.getServerOrigin());
-                    if (!entry.isPermanent())
-                        json = json.replace("DURATION", getDurationString(entry.getDuration()));
-                    else
-                        json = json.replace("DURATION", "");
-                    params = new StringEntity(json);
-                    request.setEntity(params);
+                    fileName = "kick.json";
                     break;
                 case "mute":
                     if (entry.isIpban()) {
-                        json = new String(Files.readAllBytes(Paths.get(getDataFolder().getAbsolutePath()+"/embeds/ipmute-added.json")));
-                        json = json.replace("%player%", p).replace("%staff%", entry.getExecutorName()).replace("%server%", entry.getServerOrigin());
-                        if (entry.getReason() == null)
-                            json = json.replace("%reason%", "No Reason Provided");
-                        else
-                            json = json.replace("%reason%", entry.getReason());
-                        if (!entry.isPermanent())
-                            json = json.replace("DURATION", getDurationString(entry.getDuration()));
-                        else
-                            json = json.replace("DURATION", "");
-                        params = new StringEntity(json);
-                        request.setEntity(params);
+                        fileName = "ipmute-added.json";
                     } else {
-                        json = new String(Files.readAllBytes(Paths.get(getDataFolder().getAbsolutePath()+"/embeds/mute-added.json")));
-                        json = json.replace("%player%", p).replace("%staff%", entry.getExecutorName()).replace("%server%", entry.getServerOrigin());
-                        if (entry.getReason() == null)
-                            json = json.replace("%reason%", "No Reason Provided");
-                        else
-                            json = json.replace("%reason%", entry.getReason());
-                        if (!entry.isPermanent())
-                            json = json.replace("DURATION", getDurationString(entry.getDuration()));
-                        else
-                            json = json.replace("DURATION", "");
-                        params = new StringEntity(json);
-                        request.setEntity(params);
+                        fileName = "mute-added.json";
                     }
                     break;
                 case "warn":
-                    json = new String(Files.readAllBytes(Paths.get(getDataFolder().getAbsolutePath()+"/embeds/warn-added.json")));
-                    json = json.replace("%player%", p).replace("%staff%", entry.getExecutorName()).replace("%server%", entry.getServerOrigin());
-                    if (entry.getReason() == null)
-                        json = json.replace("%reason%", "No Reason Provided");
-                    else
-                        json = json.replace("%reason%", entry.getReason());
-                    params = new StringEntity(json);
-                    request.setEntity(params);
+                    fileName = "warn-added.json";
             }
+            HttpClient client = HttpClients.createDefault();
+            HttpPost request = new HttpPost(getConfig().getWebhookUrl());
+            request.setHeader("Content-type", "application/json");
 
-            getServer().getScheduler().buildTask(this, () -> {
-                try {
-                    httpClient.execute(request);
-                } catch (IOException e) {
-                    this.getLogger().error("Failed to send notification. Is the webhook valid?");
-                }
-            }).schedule();
+            String json = withFile(fileName, entry);
+            StringEntity params = new StringEntity(json);
+            request.setEntity(params);
+
+            sendRequest(client, request);
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    private String getDurationString(long duration) {
+    public static void sendRequest(HttpClient client, HttpPost request) {
+        AsyncUtils.executeAsync(() -> {
+            try {
+                client.execute(request);
+            } catch (IOException e) {
+                getLogger().error("Failed to send notification. Is the webhook valid?");
+            }
+        });
+    }
+
+    public static String getDurationString(long duration) {
         long days = TimeUnit.MILLISECONDS.toDays(duration);
         duration -= TimeUnit.DAYS.toMillis(days);
         long hours = TimeUnit.MILLISECONDS.toHours(duration);
@@ -300,7 +253,7 @@ public class LiteBansWebhook implements IModifierEventable {
         return sb.toString();
     }
 
-    private String getPlayerName(String uuid) {
+    public static String getPlayerName(String uuid) {
         try {
             PreparedStatement stmt = Database.get()
                     .prepareStatement("SELECT name FROM {history} WHERE uuid = ? ORDER BY id DESC LIMIT 1");
